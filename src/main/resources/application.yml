@@ -1,0 +1,18 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /project-deployment
+
+spring:
+  datasource:
+    url: jdbc:postgresql://user_developer.dpg-d3e194uuk2gs739qaml0-a.singapore-postgres.render.com:5432/project_deployment_database
+    username: user_developer
+    password: c0rSjSRYPuW1rCG0l3kIlhfg8z3heK3q
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    format-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
