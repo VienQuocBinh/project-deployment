@@ -13,11 +13,11 @@ jobs:
       - name: Trigger Render deploy
         id: deploy
         run: |
-          response=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{}' \
-            https://api.render.com/v1/services/srv-d3e2rauuk2gs739rlrfg/deploys)
+          response=$(curl --request POST \
+                  --url https://api.render.com/v1/services/srv-d3e2rauuk2gs739rlrfg/deploys \
+                  --header 'accept: application/json' \
+                  --header 'content-type: application/json' \
+                  --data ')
 
           echo "Deploy triggered: $response"
           deploy_id=$(echo "$response" | jq -r '.id')
@@ -47,3 +47,4 @@ jobs:
           fi
 
           echo "✅ Render deploy successful"
+
