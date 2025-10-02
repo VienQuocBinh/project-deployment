@@ -92,7 +92,7 @@ jobs:
 
             http_code=$(echo "$response" | tail -n1)
             body=$(echo "$response" | sed '$d')
-            status=$(echo "$body" | jq -r 'if type == "array" then .[0].deploy.status else .status // .deploy.status end // empty')
+            status=$(echo "$body" | jq -r '.status // .deploy.status // empty')
 
             if [ "$http_code" != "200" ]; then
               echo "⚠️ Status check: $status (attempt $attempt/$max_attempts)"
@@ -131,7 +131,7 @@ jobs:
             
             if (deployId && deployId !== '' && deployId !== 'null') {
               message += `Deploy ID: \`${deployId}\`\n`;
-              message += `[View deployment details](https://dashboard.render.com/web/${serviceId}/deploys/$deployId)`;
+              message += `[View deployment details](https://dashboard.render.com/web/${serviceId}/deploys/${deployId})`;
             }
             
             try {
