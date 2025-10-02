@@ -13,17 +13,19 @@ jobs:
       - name: Trigger Render deploy
         id: deploy
         run: |
-          response=$(curl --request POST \
-                  --url https://api.render.com/v1/services/srv-d3e2rauuk2gs739rlrfg/deploys \
-                  --header 'accept: application/json' \
-                  --header 'content-type: application/json' \
-                  --data ')
+          response=$(curl -s --request POST \
+            --url https://api.render.com/v1/services/srv-d3e2rauuk2gs739rlrfg/deploys \
+            --header "accept: application/json" \
+            --header "content-type: application/json" \
+            --header "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            --data '{}')
 
           echo "Deploy triggered: $response"
+
           deploy_id=$(echo "$response" | jq -r '.id')
           if [ "$deploy_id" = "null" ] || [ -z "$deploy_id" ]; then
-          echo "❌ Failed to get deploy_id from Render response"
-          exit 1
+            echo "❌ Failed to get deploy_id from Render response"
+            exit 1
           fi
           
           echo "deploy_id=$deploy_id" >> $GITHUB_ENV
