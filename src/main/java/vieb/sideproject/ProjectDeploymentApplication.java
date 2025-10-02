@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class ProjectDeploymentApplication {
 
     public static void main(String[] args) {
+        // Test CI action
         SpringApplication.run(ProjectDeploymentApplication.class, args);
     }
 }
