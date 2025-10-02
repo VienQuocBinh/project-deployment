@@ -48,7 +48,7 @@ jobs:
             echo "✅ Deploy accepted (202), fetching latest deploy..."
           
             # Wait a moment for deploy to register
-            sleep 3
+            sleep 5
           
             # Get the latest deploy for this service
             deploys_response=$(curl -s \
@@ -56,7 +56,7 @@ jobs:
               -H "accept: application/json" \
               "https://api.render.com/v1/services/srv-d3e2rauuk2gs739rlrfg/deploys?limit=1")
           
-            deploy_id=$(echo "$deploys_response" | jq -r '.[0].id // .deploys[0].id // empty')
+            deploy_id=$(echo "$deploys_response" | jq -r 'if type == "array" then .[0].id else .deploys[0].id end // empty')
           else
             # Try to extract from response body
             deploy_id=$(echo "$body" | jq -r '.id // .deploy.id // empty')
