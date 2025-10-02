@@ -13,40 +13,108 @@ jobs:
       - name: Trigger Render deploy
         id: deploy
         run: |
-          response=$(curl -s --request POST \
+          echo "🚀 Triggering Render deployment..."
+          
+          response=$(curl -s -w "\n%{http_code}" --request POST \
             --url https://api.render.com/v1/services/srv-d3e2rauuk2gs739rlrfg/deploys \
             --header "accept: application/json" \
             --header "content-type: application/json" \
             --header "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
             --data '{}')
 
-          echo "Deploy triggered: $response"
+          # Split response body and HTTP code
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
 
-          deploy_id=$(echo "$response" | jq -r '.id')
-          if [ "$deploy_id" = "null" ] || [ -z "$deploy_id" ]; then
-            echo "❌ Failed to get deploy_id from Render response"
+          echo "HTTP Status: $http_code"
+          echo "Response Body: $body"
+
+          # Check HTTP status
+          if [ "$http_code" != "201" ] && [ "$http_code" != "200" ]; then
+            echo "❌ Failed to trigger deploy. HTTP Status: $http_code"
+            echo "Response: $body"
+            exit 1
+          fi
+
+          # Extract deploy ID
+          deploy_id=$(echo "$body" | jq -r '.id // .deploy.id // empty')
+          
+          if [ -z "$deploy_id" ] || [ "$deploy_id" = "null" ]; then
+            echo "❌ Failed to extract deploy_id from response"
+            echo "Full response: $body"
             exit 1
           fi
           
+          echo "✅ Deploy triggered successfully"
+          echo "Deploy ID: $deploy_id"
           echo "deploy_id=$deploy_id" >> $GITHUB_ENV
 
       - name: Wait for Render deploy to finish
         run: |
-          status="in_progress"
-          while [ "$status" = "in_progress" ] || [ "$status" = "pending" ]; do
+          echo "⏳ Waiting for deployment to complete..."
+          echo "Deploy ID: ${{ env.deploy_id }}"
+          
+          max_attempts=60  # 15 minutes maximum (60 * 15 seconds)
+          attempt=0
+          status="pending"
+          
+          while [ "$attempt" -lt "$max_attempts" ]; do
             sleep 15
-            response=$(curl -s \
+            attempt=$((attempt + 1))
+          
+            response=$(curl -s -w "\n%{http_code}" \
               -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-              https://api.render.com/v1/deploys/$deploy_id)
+              -H "accept: application/json" \
+              https://api.render.com/v1/deploys/${{ env.deploy_id }})
 
-            status=$(echo "$response" | jq -r '.status')
-            echo "Current status: $status"
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | sed '$d')
+
+            if [ "$http_code" != "200" ]; then
+              echo "⚠️ Failed to fetch deploy status (attempt $attempt/$max_attempts)"
+              continue
+            fi
+
+            status=$(echo "$body" | jq -r '.status // .deploy.status // empty')
+          
+            echo "📊 Status check $attempt/$max_attempts: $status"
+
+            # Check if deployment is complete
+            if [ "$status" = "live" ]; then
+              echo "✅ Render deploy successful!"
+              exit 0
+            elif [ "$status" = "build_failed" ] || [ "$status" = "deploy_failed" ] || [ "$status" = "canceled" ]; then
+              echo "❌ Render deploy failed with status: $status"
+              exit 1
+            fi
+          
+            # Continue waiting for in_progress, pending, building, etc.
           done
 
-          if [ "$status" != "live" ]; then
-            echo "❌ Render deploy failed: $status"
-            exit 1
-          fi
+          echo "❌ Deploy timeout after 15 minutes"
+          exit 1
 
-          echo "✅ Render deploy successful"
-
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const deployId = '${{ env.deploy_id }}';
+            const serviceId = 'srv-d3e2rauuk2gs739rlrfg';
+            
+            let message = status === 'success' 
+              ? '✅ **Render deployment successful!**\n\n'
+              : '❌ **Render deployment failed**\n\n';
+            
+            if (deployId && deployId !== '') {
+              message += `Deploy ID: \`${deployId}\`\n`;
+              message += `[View deployment details](https://dashboard.render.com/web/${serviceId})`;
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
