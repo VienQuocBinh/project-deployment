@@ -98,8 +98,6 @@ jobs:
               echo "⚠️ Status check: $status (attempt $attempt/$max_attempts)"
               continue
             fi
-
-            status=$(echo "$body" | jq -r '.status // .deploy.status // empty')
           
             echo "📊 Status check $attempt/$max_attempts: $status"
 
