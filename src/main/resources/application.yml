@@ -16,3 +16,9 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+scheduler:
+  cron: 0 * * * * *   # 0 sec of every minute
+
+external:
+  url: https://project-deployment-bsro.onrender.com/project-deployment/swagger-ui/index.html
