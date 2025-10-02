@@ -95,10 +95,12 @@ jobs:
             status=$(echo "$body" | jq -r '.status // .deploy.status // empty')
 
             if [ "$http_code" != "200" ]; then
-              echo "⚠️ Status check: $status (attempt $attempt/$max_attempts)"
+              echo "⚠️ Failed to fetch deploy status - HTTP $http_code (attempt $attempt/$max_attempts)"
+              echo "$body"
               continue
             fi
           
+            status=$(echo "$body" | jq -r 'if type == "array" then .[0].deploy.status else .status // .deploy.status end // empty')
             echo "📊 Status check $attempt/$max_attempts: $status"
 
             # Check if deployment is complete
